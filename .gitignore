@@ -1,0 +1,6 @@
+/.env
+/.vscode
+/MD
+/PDFs
+/venv
+/__pycache__
