@@ -3,6 +3,7 @@ from pdf2image import convert_from_path
 import chat_gpt  # Asegúrate de que chat_gpt.py esté en el mismo directorio o en el PYTHONPATH
 import chat_gemini
 from tqdm import tqdm
+import argparse
 
 MODELS = {
     "chat_gpt": chat_gpt,
@@ -23,7 +24,12 @@ def extraer_explicacion(image, num_pagina, debug=False, model=MODELS['chat_gemin
     return respuesta if respuesta is not None else "[No se obtuvo respuesta]"
 
 
-def crear_doc_con_imagen_y_explicacion(pdf_entrada, folder_salida, debug=False, dpi=200):
+def crear_doc_con_imagen_y_explicacion(
+    pdf_entrada,
+    folder_salida,
+    debug=False,
+    model=MODELS['chat_gemini'],
+    dpi=200):
     """
     Convierte las páginas del PDF en imágenes, obtiene una explicación para cada una y genera un documento DOCX con:
       - Página de título
@@ -31,6 +37,7 @@ def crear_doc_con_imagen_y_explicacion(pdf_entrada, folder_salida, debug=False, 
       - Encabezados y pies de página con numeración
       - Cada imagen centrada seguida de su explicación formateada en Markdown.
     """
+
     print("Convirtiendo páginas a imágenes...")
     imagenes = convert_from_path(pdf_entrada, dpi=dpi)
     num_paginas = len(imagenes)
@@ -62,25 +69,55 @@ def crear_doc_con_imagen_y_explicacion(pdf_entrada, folder_salida, debug=False, 
     # Configuración base del estilo
     print(f"Documento MD generado: {doc_salida}")
 
-def main(limit=None,debug=False):
-    FOLDER_PDFS = "PDFs"
-    FOLDER_SAVE = "MD"
-    if not os.path.exists(FOLDER_PDFS):
-        os.mkdir(FOLDER_PDFS)
-    if not os.path.exists(FOLDER_SAVE):
-        os.mkdir(FOLDER_SAVE)
-    for fichero in os.listdir(FOLDER_PDFS):
+def main(
+    limit=None,
+    debug=False,
+    folder_pdfs="PDFs",
+    folder_save="MD",
+    model=MODELS['chat_gemini'],
+    dpi=200):
+
+
+    if not os.path.exists(folder_pdfs): os.mkdir(folder_pdfs)
+    if not os.path.exists(folder_save): os.mkdir(folder_save)
+
+    for fichero in os.listdir(folder_pdfs):
         if fichero.endswith(".pdf"):
             print(f"Procesando fichero: {fichero}")
-            salida_doc = fichero.replace(".pdf", "_salida.docx")
-            ruta_salida_doc = os.path.join(FOLDER_SAVE, salida_doc)
-            ruta_entrada_pdf = os.path.join(FOLDER_PDFS, fichero)
-            crear_doc_con_imagen_y_explicacion(ruta_entrada_pdf, FOLDER_SAVE, debug=debug)
+            ruta_entrada_pdf = os.path.join(folder_pdfs, fichero)
+            crear_doc_con_imagen_y_explicacion(ruta_entrada_pdf,
+                                               folder_save,
+                                               debug=debug,
+                                               model=model,
+                                               dpi=dpi)
             if limit is not None:
                 limit -= 1
                 if limit <= 0:
                     break
     print("Proceso completado.")
 
+
 if __name__ == "__main__":
-    main()  # Cambia el número a None para procesar todos los PDFs en la carpeta
+    parser = argparse.ArgumentParser(description="Generador de documentos a partir de PDFs")
+    parser.add_argument('-l', '--limit', type=int, default=None, help="Número máximo de PDFs a procesar")
+    parser.add_argument('-d', '--debug', action='store_true', help="Activar modo de depuración")
+    parser.add_argument('-f', '--folder_pdfs', type=str, default="PDFs", help="Carpeta de entrada con PDFs")
+    parser.add_argument('-s', '--folder_save', type=str, default="MD", help="Carpeta de salida para documentos generados")
+    parser.add_argument('-dpi', '--dpi', type=int, default=200, help="DPI para la conversión de PDF a imagen")
+    parser.add_argument('-m', '--model', type=str, choices=MODELS.keys(), default='chat_gemini', help="Modelo a utilizar para la generación de contenido")
+
+    args = parser.parse_args()
+
+    limit = args.limit if args.limit is not None else None
+    folder_pdfs = args.folder_pdfs if args.folder_pdfs else "PDFs"
+    folder_save = args.folder_save if args.folder_save else "MD"
+    dpi = args.dpi if args.dpi else 200
+    model = MODELS[args.model] if args.model else MODELS['chat_gemini']
+    debug = args.debug if args.debug else False
+
+    main(limit=limit,
+         debug=debug,
+         folder_pdfs=folder_pdfs,
+         folder_save=folder_save,
+         model=model,
+         dpi=dpi)
