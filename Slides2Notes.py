@@ -60,11 +60,11 @@ def crear_doc_con_imagen_y_explicacion(
             name_img = f"pagina_{i + 1}.png"
             image_path = os.path.join(folder_img, name_img)
             image.save(image_path, "PNG")
-            image = f"![Diapositiva de la página {i}]({f"{folder_img_name}/{name_img}"})"
+            image_text = f"![Diapositiva de la página {i}]({f"{folder_img_name}/{name_img}"})"
 
             explicacion = extraer_explicacion(image, i, debug=debug,model=MODELS["chat_gemini"])  # Para evitar el error de la primera página
-            explicacion_parser = "".join([line.lstrip('> ') for line in explicacion.split("\n")])  # Limpiar la explicación de saltos de línea innecesarios
-            file.write(f"{image}\n\n{explicacion_parser}")  # Escribir la explicación en el documento
+            explicacion_parser = "\n".join([line.lstrip('> ') for line in explicacion.split("\n")])  # Limpiar la explicación de saltos de línea innecesarios
+            file.write(f"{image_text}\n{explicacion_parser}\n\n")  # Escribir la explicación en el documento
 
     # Configuración base del estilo
     print(f"Documento MD generado: {doc_salida}")
